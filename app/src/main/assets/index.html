@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Exzo Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Шапка */
+        .header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e94560;
+        }
+        
+        .header .status {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .header .status.connected {
+            color: #4ade80;
+        }
+        
+        /* Основная область */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Экран подключения */
+        .screen-connect {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .screen-connect.hidden {
+            display: none;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .screen-connect h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #e94560;
+        }
+        
+        .screen-connect p {
+            color: #888;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .input-group {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 16px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 12px;
+            color: #eee;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            border-color: #e94560;
+        }
+        
+        .btn {
+            width: 100%;
+            max-width: 300px;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #c23152);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #16213e;
+            color: #eee;
+            border: 2px solid #0f3460;
+        }
+        
+        .btn-secondary:hover {
+            background: #0f3460;
+        }
+        
+        /* Экран чата */
+        .screen-chat {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .screen-chat.active {
+            display: flex;
+        }
+        
+        /* Список пользователей */
+        .users-panel {
+            background: #16213e;
+            padding: 12px;
+            border-bottom: 1px solid #0f3460;
+            max-height: 80px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #0f3460;
+            border-radius: 20px;
+            margin-right: 8px;
+            font-size: 13px;
+        }
+        
+        .user-chip .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+        
+        .user-chip .dot.offline {
+            background: #666;
+        }
+        
+        /* Область сообщений */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            scroll-behavior: smooth;
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.sent {
+            flex-direction: row-reverse;
+        }
+        
+        .message .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .message.sent .avatar {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+        }
+        
+        .message .bubble {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            background: #16213e;
+            position: relative;
+        }
+        
+        .message.sent .bubble {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+        }
+        
+        .message .name {
+            font-size: 12px;
+            color: #e94560;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .message.sent .name {
+            color: #4ade80;
+            text-align: right;
+        }
+        
+        .message .text {
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .message .time {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            text-align: right;
+        }
+        
+        .system-message {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin: 12px 0;
+            padding: 8px;
+            background: rgba(15, 52, 96, 0.3);
+            border-radius: 8px;
+        }
+        
+        /* Поле ввода */
+        .input-area {
+            padding: 12px;
+            background: #16213e;
+            border-top: 1px solid #0f3460;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        
+        .input-area textarea {
+            flex: 1;
+            padding: 12px 16px;
+            background: #1a1a2e;
+            border: 2px solid #0f3460;
+            border-radius: 20px;
+            color: #eee;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            max-height: 100px;
+            min-height: 44px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        .input-area textarea:focus {
+            border-color: #e94560;
+        }
+        
+        .input-area .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .input-area .send-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Кнопки звонка */
+        .call-buttons {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #16213e;
+        }
+        
+        .call-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .call-btn.call {
+            background: #4ade80;
+            color: #000;
+        }
+        
+        .call-btn.hangup {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .call-btn.mute {
+            background: #f59e0b;
+            color: #000;
+        }
+        
+        .call-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Модальное окно звонка */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #16213e;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 300px;
+            width: 90%;
+            animation: scaleIn 0.3s ease;
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .modal h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        
+        .modal p {
+            color: #888;
+            margin-bottom: 24px;
+        }
+        
+        .modal .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .modal .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .modal .accept-btn {
+            background: #4ade80;
+            color: #000;
+        }
+        
+        .modal .reject-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        /* Статус звонка */
+        .call-status {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: #000;
+            padding: 8px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .call-status.active {
+            display: block;
+        }
+        
+        /* Настройки */
+        .settings-panel {
+            display: none;
+            padding: 20px;
+            background: #16213e;
+            border-radius: 20px 20px 0 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 50;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .settings-panel.active {
+            display: block;
+        }
+        
+        .settings-panel h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+        
+        .settings-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        .settings-item label {
+            display: block;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        
+        .settings-item .value {
+            font-size: 16px;
+        }
+        
+        /* Скроллбар */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #0f3460;
+            border-radius: 3px;
+        }
+        
+        /* Индикатор набора текста */
+        .typing-indicator {
+            padding: 8px 16px;
+            color: #888;
+            font-size: 13px;
+            font-style: italic;
+            display: none;
+        }
+        
+        .typing-indicator.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Шапка -->
+    <div class="header">
+        <h1>💬 Exzo Chat</h1>
+        <div class="status" id="connectionStatus">Не подключено</div>
+    </div>
+    
+    <!-- Основная область -->
+    <div class="main">
+        <!-- Экран подключения -->
+        <div class="screen-connect" id="screenConnect">
+            <div class="logo">💬</div>
+            <h2>Exzo Chat</h2>
+            <p>Введите никнейм и подключитесь к серверу</p>
+            
+            <div class="input-group">
+                <label>Никнейм</label>
+                <input type="text" id="nicknameInput" placeholder="Ваш никнейм" maxlength="20">
+            </div>
+            
+            <div class="input-group">
+                <label>IP сервера</label>
+                <input type="text" id="serverInput" placeholder="192.168.1.100" value="26.112.163.187">
+            </div>
+            
+            <button class="btn btn-primary" onclick="connect()">Подключиться</button>
+        </div>
+        
+        <!-- Экран чата -->
+        <div class="screen-chat" id="screenChat">
+            <!-- Статус звонка -->
+            <div class="call-status" id="callStatus">📞 Разговор с пользователем</div>
+            
+            <!-- Панель пользователей -->
+            <div class="users-panel" id="usersPanel"></div>
+            
+            <!-- Сообщения -->
+            <div class="messages" id="messages"></div>
+            
+            <!-- Индикатор набора -->
+            <div class="typing-indicator" id="typingIndicator">Кто-то печатает...</div>
+            
+            <!-- Кнопки звонка -->
+            <div class="call-buttons" id="callButtons" style="display:none;">
+                <button class="call-btn call" id="callBtn" onclick="startCall()">📞 Позвонить</button>
+                <button class="call-btn mute" id="muteBtn" onclick="toggleMute()" style="display:none;">🎤 Выкл</button>
+                <button class="call-btn hangup" id="hangupBtn" onclick="endCall()" style="display:none;">📵 Сбросить</button>
+            </div>
+            
+            <!-- Поле ввода -->
+            <div class="input-area">
+                <textarea id="messageInput" placeholder="Введите сообщение..." rows="1"></textarea>
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно входящего звонка -->
+    <div class="modal-overlay" id="callModal">
+        <div class="modal">
+            <h3>📞 Входящий звонок</h3>
+            <p id="callerName">Пользователь звонит вам</p>
+            <div class="modal-buttons">
+                <button class="reject-btn" onclick="rejectCall()">Отклонить</button>
+                <button class="accept-btn" onclick="acceptCall()">Принять</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Настройки -->
+    <div class="settings-panel" id="settingsPanel">
+        <h3>⚙️ Настройки</h3>
+        <div class="settings-item">
+            <label>Никнейм</label>
+            <div class="value" id="settingsNickname">-</div>
+        </div>
+        <div class="settings-item">
+            <label>Ваш IP</label>
+            <div class="value" id="settingsIp">-</div>
+        </div>
+        <div class="settings-item">
+            <label>Сервер</label>
+            <div class="value" id="settingsServer">-</div>
+        </div>
+        <div class="settings-item">
+            <label>Статус</label>
+            <div class="value" id="settingsStatus">Не подключено</div>
+        </div>
+        <button class="btn btn-secondary" onclick="clearChat()" style="margin-top:16px;">🗑 Очистить чат</button>
+        <button class="btn btn-secondary" onclick="disconnect()" style="margin-top:8px;">Отключиться</button>
+        <button class="btn btn-secondary" onclick="closeSettings()" style="margin-top:8px;">Закрыть</button>
+    </div>
+    
+    <script>
+        // Состояние приложения
+        let state = {
+            nickname: '',
+            serverIp: '',
+            connected: false,
+            users: {},
+            inCall: false,
+            callWith: null,
+            muted: false,
+            ws: null
+        };
+        
+        // Загрузка сохранённых данных
+        function loadState() {
+            const saved = localStorage.getItem('exzoChatState');
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.nickname) {
+                    document.getElementById('nicknameInput').value = data.nickname;
+                }
+                if (data.serverIp) {
+                    document.getElementById('serverInput').value = data.serverIp;
+                }
+            }
+        }
+        
+        // Сохранение данных
+        function saveState() {
+            localStorage.setItem('exzoChatState', JSON.stringify({
+                nickname: state.nickname,
+                serverIp: state.serverIp
+            }));
+        }
+        
+        // Подключение к серверу
+        function connect() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            const serverIp = document.getElementById('serverInput').value.trim();
+            
+            if (!nickname) {
+                alert('Введите никнейм');
+                return;
+            }
+            
+            if (!serverIp) {
+                alert('Введите IP сервера');
+                return;
+            }
+            
+            state.nickname = nickname;
+            state.serverIp = serverIp;
+            saveState();
+            
+            // Имитация подключения (в реальном приложении здесь будет WebSocket)
+            simulateConnection();
+        }
+        
+        // Имитация подключения
+        function simulateConnection() {
+            updateStatus('Подключение...', false);
+            
+            setTimeout(() => {
+                state.connected = true;
+                updateStatus('Подключено к ' + state.serverIp, true);
+                
+                // Показываем экран чата
+                document.getElementById('screenConnect').classList.add('hidden');
+                document.getElementById('screenChat').classList.add('active');
+                document.getElementById('callButtons').style.display = 'flex';
+                
+                // Обновляем настройки
+                document.getElementById('settingsNickname').textContent = state.nickname;
+                document.getElementById('settingsServer').textContent = state.serverIp;
+                document.getElementById('settingsStatus').textContent = 'Подключено';
+                
+                // Добавляем системное сообщение
+                addSystemMessage('Вы подключились к серверу');
+                
+                // Имитация пользователей
+                simulateUsers();
+                
+            }, 1500);
+        }
+        
+        // Имитация пользователей
+        function simulateUsers() {
+            const users = {
+                'Иван': { status: 'online' },
+                'Мария': { status: 'online' },
+                'Алексей': { status: 'offline' }
+            };
+            
+            state.users = users;
+            updateUsersPanel();
+        }
+        
+        // Обновление панели пользователей
+        function updateUsersPanel() {
+            const panel = document.getElementById('usersPanel');
+            panel.innerHTML = '';
+            
+            for (const [name, info] of Object.entries(state.users)) {
+                if (name === state.nickname) continue;
+                
+                const chip = document.createElement('div');
+                chip.className = 'user-chip';
+                chip.innerHTML = `
+                    <span class="dot ${info.status === 'online' ? '' : 'offline'}"></span>
+                    <span>${name}</span>
+                `;
+                chip.onclick = () => selectUser(name);
+                panel.appendChild(chip);
+            }
+        }
+        
+        // Выбор пользователя
+        function selectUser(name) {
+            state.selectedUser = name;
+            addSystemMessage('Выбран пользователь: ' + name);
+        }
+        
+        // Обновление статуса
+        function updateStatus(text, connected) {
+            const status = document.getElementById('connectionStatus');
+            status.textContent = text;
+            status.className = 'status' + (connected ? ' connected' : '');
+        }
+        
+        // Отправка сообщения
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            addMessage(state.nickname, text, true);
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Имитация ответа
+            setTimeout(() => {
+                const responses = [
+                    'Привет!',
+                    'Как дела?',
+                    'Интересно!',
+                    'Согласен!',
+                    '👍'
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addMessage('Иван', randomResponse, false);
+            }, 1000 + Math.random() * 2000);
+        }
+        
+        // Добавление сообщения
+        function addMessage(name, text, isSent) {
+            const messages = document.getElementById('messages');
+            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            
+            const message = document.createElement('div');
+            message.className = 'message' + (isSent ? ' sent' : '');
+            message.innerHTML = `
+                <div class="avatar">${name[0].toUpperCase()}</div>
+                <div class="bubble">
+                    <div class="name">${name}</div>
+                    <div class="text">${escapeHtml(text)}</div>
+                    <div class="time">${time}</div>
+                </div>
+            `;
+            
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        // Добавление системного сообщения
+        function addSystemMessage(text) {
+            const messages = document.getElementById('messages');
+            const message = document.createElement('div');
+            message.className = 'system-message';
+            message.textContent = text;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Звонок
+        function startCall() {
+            if (!state.selectedUser) {
+                alert('Выберите пользователя для звонка');
+                return;
+            }
+            
+            state.inCall = true;
+            state.callWith = state.selectedUser;
+            
+            document.getElementById('callStatus').textContent = '📞 Звоним ' + state.callWith + '...';
+            document.getElementById('callStatus').classList.add('active');
+            document.getElementById('callBtn').style.display = 'none';
+            document.getElementById('hangupBtn').style.display = 'flex';
+            document.getElementById('muteBtn').style.display = 'flex';
+            
+            addSystemMessage('Вы звоните ' + state.callWith);
+            
+            // Имитация принятия звонка
+            setTimeout(() => {
+                document.getElementById('callStatus').textContent = '📞 Разговор с ' + state.callWith;
+                addSystemMessage(state.callWith + ' принял звонок');
+            }, 2000);
+        }
+        
+        // Завершение звонка
+        function endCall() {
+            state.inCall = false;
+            state.callWith = null;
+            state.muted = false;
+            
+            document.getElementById('callStatus').classList.remove('active');
+            document.getElementById('callBtn').style.display = 'flex';
+            document.getElementById('hangupBtn').style.display = 'none';
+            document.getElementById('muteBtn').style.display = 'none';
+            document.getElementById('muteBtn').textContent = '🎤 Выкл';
+            
+            addSystemMessage('Звонок завершён');
+        }
+        
+        // Входящий звонок (имитация)
+        function simulateIncomingCall() {
+            setTimeout(() => {
+                if (!state.connected) return;
+                
+                document.getElementById('callerName').textContent = 'Мария звонит вам';
+                document.getElementById('callModal').classList.add('active');
+            }, 5000);
+        }
+        
+        // Принять звонок
+        function acceptCall() {
+            document.getElementById('callModal').classList.remove('active');
+            
+            state.inCall = true;
+            state.callWith = 'Мария';
+            
+            document.getElementById('callStatus').textContent = '📞 Разговор с Марией';
+            document.getElementById('callStatus').classList.add('active');
+            document.getElementById('callBtn').style.display = 'none';
+            document.getElementById('hangupBtn').style.display = 'flex';
+            document.getElementById('muteBtn').style.display = 'flex';
+            
+            addSystemMessage('Вы приняли звонок от Мария');
+        }
+        
+        // Отклонить звонок
+        function rejectCall() {
+            document.getElementById('callModal').classList.remove('active');
+            addSystemMessage('Вы отклонили звонок');
+        }
+        
+        // Вкл/Выкл микрофон
+        function toggleMute() {
+            state.muted = !state.muted;
+            document.getElementById('muteBtn').textContent = state.muted ? '🎤 Вкл' : '🎤 Выкл';
+            addSystemMessage('Микрофон ' + (state.muted ? 'выключен' : 'включен'));
+        }
+        
+        // Очистить чат
+        function clearChat() {
+            document.getElementById('messages').innerHTML = '';
+            addSystemMessage('Чат очищен');
+            closeSettings();
+        }
+        
+        // Отключиться
+        function disconnect() {
+            state.connected = false;
+            state.users = {};
+            
+            document.getElementById('screenConnect').classList.remove('hidden');
+            document.getElementById('screenChat').classList.remove('active');
+            
+            updateStatus('Не подключено', false);
+            closeSettings();
+        }
+        
+        // Открыть настройки
+        function openSettings() {
+            document.getElementById('settingsPanel').classList.add('active');
+        }
+        
+        // Закрыть настройки
+        function closeSettings() {
+            document.getElementById('settingsPanel').classList.remove('active');
+        }
+        
+        // Обработка Enter в поле сообщения
+        document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Автоматическая высота textarea
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+        
+        // Обработка Enter в полях ввода
+        document.getElementById('nicknameInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') connect();
+        });
+        
+        document.getElementById('serverInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') connect();
+        });
+        
+        // Добавление кнопки настроек в шапку
+        document.querySelector('.header').addEventListener('click', function(e) {
+            if (state.connected && e.target.tagName !== 'INPUT') {
+                openSettings();
+            }
+        });
+        
+        // Инициализация
+        loadState();
+        
+        // Имитация входящего звонка через 5 секунд после подключения
+        // simulateIncomingCall(); // Раскомментируйте для тестирования
+    </script>
+</body>
+</html>
